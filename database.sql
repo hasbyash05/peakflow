@@ -65,3 +65,4 @@ CREATE TABLE IF NOT EXISTS `print_queue` (
   PRIMARY KEY (`id`),
   INDEX `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

@@ -17,3 +17,4 @@ RewriteRule ^check-print/?$ api.php?action=check_print [QSA,L]
 RewriteRule ^export\.csv/?$ api.php?action=export_csv [QSA,L]
 RewriteRule ^export/?$ api.php?action=export_csv [QSA,L]
 </IfModule>
+

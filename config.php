@@ -128,3 +128,4 @@ function jsonOut(array $data, int $statusCode = 200): void {
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit;
 }
+
