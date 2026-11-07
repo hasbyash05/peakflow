@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PeakFlow — Portal Pemantauan Pernapasan</title>
+<style>
+:root {
+  --bg-surface: #FFFFFF;
+  --bg-canvas: #F5F5F7;
+  --text-primary: #1D1D1F;
+  --text-secondary: #6E6E73;
+  --border-subtle: #D2D2D7;
+  --accent: #0071E3;
+  --zone-green: #34C759;
+  --zone-yellow: #FF9F0A;
+  --zone-red: #FF3B30;
+  --zone-green-bg: rgba(52, 199, 89, 0.15);
+  --zone-yellow-bg: rgba(255, 159, 10, 0.15);
+  --zone-red-bg: rgba(255, 59, 48, 0.15);
+  --hairline: rgba(0, 0, 0, 0.08);
+  --border-card: rgba(0, 0, 0, 0.06);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --backdrop-modal: rgba(0, 0, 0, 0.4);
+  --nav-glass: rgba(255, 255, 255, 0.84);
+  --font-sans: -apple-system, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --fs-11: 11px; --fs-13: 13px; --fs-15: 15px; --fs-17: 17px;
+  --fs-22: 22px; --fs-28: 28px; --fs-48: 48px; --fs-64: 64px;
+  --fw-body: 400; --fw-heading: 600; --fw-pef: 700;
+  --sp-4: 4px; --sp-8: 8px; --sp-12: 12px; --sp-16: 16px;
+  --sp-20: 20px; --sp-24: 24px; --sp-32: 32px; --sp-40: 40px; --sp-48: 48px;
+  --radius-input: 10px; --radius-card: 16px; --radius-modal: 18px; --radius-pill: 980px;
+  --ease-apple: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-state: 200ms; --dur-modal: 400ms;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans); font-size: var(--fs-15); font-weight: var(--fw-body);
+  line-height: 1.6; letter-spacing: 0.025em; color: var(--text-primary); background-color: var(--bg-canvas);
+  -webkit-font-smoothing: antialiased; min-height: 100vh; display: flex; flex-direction: column;
+}
+.top-nav {
+  position: sticky; top: 0; z-index: 30; background-color: var(--nav-glass);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--hairline);
+}
+.nav-inner {
+  max-width: 820px; margin: 0 auto; padding: var(--sp-12) var(--sp-20);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-12); flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: var(--sp-8); font-size: var(--fs-17); font-weight: var(--fw-heading); color: var(--text-primary); text-decoration: none; letter-spacing: 0.03em; }
+.hw-strip, .nav-actions, .row-gap { display: flex; align-items: center; gap: var(--sp-8); flex-wrap: wrap; }
+.hw-strip { gap: var(--sp-12); margin-left: auto; }
+.hw-item { display: inline-flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-13); color: var(--text-secondary); letter-spacing: 0.02em; }
+.hw-item[data-warn="true"] { color: var(--zone-red); font-weight: var(--fw-heading); }
+.icon-20 { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-8);
+  font-family: var(--font-sans); font-size: var(--fs-15); font-weight: var(--fw-heading);
+  letter-spacing: 0.03em; border-radius: var(--radius-pill); padding: var(--sp-12) var(--sp-20); cursor: pointer;
+  transition: opacity var(--dur-state) var(--ease-apple), background-color var(--dur-state) var(--ease-apple);
+  text-decoration: none; white-space: nowrap;
+}
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background-color: var(--accent); color: var(--bg-surface); border: 1px solid transparent; }
+.btn-primary:hover:not(:disabled), .btn-secondary:hover:not(:disabled) { opacity: 0.85; }
+.btn-secondary { background-color: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-subtle); }
+.btn-danger { background-color: var(--zone-red-bg); color: var(--zone-red); border: 1px solid transparent; }
+.btn-sm { font-size: var(--fs-13); padding: var(--sp-8) var(--sp-16); }
+.badge {
+  display: inline-flex; align-items: center; gap: var(--sp-8); font-size: var(--fs-13); font-weight: var(--fw-heading);
+  letter-spacing: 0.04em; padding: var(--sp-4) var(--sp-12); border-radius: var(--radius-pill);
+  transition: background-color var(--dur-state) var(--ease-apple), color var(--dur-state) var(--ease-apple);
+}
+.badge-dot { width: 8px; height: 8px; border-radius: var(--radius-pill); background-color: currentColor; }
+.badge-green { background-color: var(--zone-green-bg); color: var(--zone-green); }
+.badge-yellow { background-color: var(--zone-yellow-bg); color: var(--zone-yellow); }
+.badge-red { background-color: var(--zone-red-bg); color: var(--zone-red); }
+.badge-neutral { background-color: var(--bg-canvas); color: var(--text-secondary); }
+.container { width: 100%; max-width: 820px; margin: 0 auto; padding: var(--sp-24) var(--sp-20) var(--sp-48); display: flex; flex-direction: column; gap: var(--sp-24); flex: 1; }
+.banner {
+  display: none; align-items: center; justify-content: space-between; gap: var(--sp-12);
+  padding: var(--sp-12) var(--sp-16); border-radius: var(--radius-card);
+  font-size: var(--fs-13); font-weight: var(--fw-heading); border: 1px solid var(--hairline); letter-spacing: 0.025em;
+}
+.banner[data-visible="true"] { display: flex; }
+.banner-error { background-color: var(--zone-red-bg); color: var(--zone-red); }
+.banner-warn { background-color: var(--zone-yellow-bg); color: var(--zone-yellow); }
+.banner-ok { background-color: var(--zone-green-bg); color: var(--zone-green); }
+.card {
+  background-color: var(--bg-surface); border-radius: var(--radius-card);
+  border: 1px solid var(--border-card); box-shadow: var(--shadow-card); padding: 32px 28px;
+}
+@media (max-width: 600px) { .card { padding: 22px 18px; } }
+.section-head, .patient-bar, .form-footer, .heatmap-header { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-16); flex-wrap: wrap; }
+.section-head { align-items: baseline; margin-bottom: 20px; }
+.section-title { font-size: var(--fs-22); font-weight: var(--fw-heading); color: var(--text-primary); letter-spacing: 0.025em; line-height: 1.35; }
+.section-subtitle { font-size: var(--fs-13); color: var(--text-secondary); letter-spacing: 0.02em; line-height: 1.6; margin-top: 6px; }
+.receipt-pre {
+  margin-top: var(--sp-12); padding: var(--sp-16); background-color: var(--bg-canvas);
+  border-radius: var(--radius-input); font-family: var(--font-mono); font-size: var(--fs-13);
+  line-height: 1.45; color: var(--text-primary); overflow-x: auto; white-space: pre; letter-spacing: 0.02em;
+}
+.patient-meta { display: flex; flex-direction: column; gap: 6px; }
+.patient-tag { font-size: var(--fs-11); font-weight: var(--fw-heading); letter-spacing: 0.06em; color: var(--text-secondary); text-transform: uppercase; }
+.patient-name { font-size: var(--fs-22); font-weight: var(--fw-heading); color: var(--text-primary); line-height: 1.3; letter-spacing: 0.02em; }
+.patient-details { font-size: var(--fs-13); color: var(--text-secondary); line-height: 1.6; letter-spacing: 0.02em; }
+.form-grid { display: grid; grid-template-columns: 1fr; gap: var(--sp-16); margin-top: var(--sp-16); }
+@media (min-width: 600px) { .form-grid { grid-template-columns: repeat(2, 1fr); } }
+.field { display: flex; flex-direction: column; gap: var(--sp-4); }
+.field-label { font-size: var(--fs-13); font-weight: var(--fw-heading); color: var(--text-secondary); letter-spacing: 0.025em; margin-bottom: 2px; }
+.input-line {
+  font-family: var(--font-sans); font-size: var(--fs-15); font-weight: var(--fw-body);
+  color: var(--text-primary); background-color: var(--bg-canvas);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-input);
+  padding: 10px 14px; width: 100%; letter-spacing: 0.02em;
+  transition: border-color var(--dur-state) var(--ease-apple), box-shadow var(--dur-state) var(--ease-apple), background-color var(--dur-state) var(--ease-apple);
+}
+.input-line:focus { outline: 0; border-color: var(--accent); background-color: var(--bg-surface); box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.18); }
+.field-error { font-size: var(--fs-11); color: var(--zone-red); min-height: 16px; letter-spacing: 0.02em; }
+.form-footer { margin-top: var(--sp-20); }
+.state-stepper {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 6px; background-color: var(--bg-canvas); border-radius: var(--radius-pill);
+  max-width: fit-content; margin: 0 auto 24px; border: 1px solid var(--hairline);
+}
+.step-pill {
+  font-size: var(--fs-11); font-weight: var(--fw-heading); color: var(--text-secondary);
+  letter-spacing: 0.035em; padding: 6px 14px; border-radius: var(--radius-pill);
+  transition: background-color var(--dur-state) var(--ease-apple), color var(--dur-state) var(--ease-apple), box-shadow var(--dur-state) var(--ease-apple);
+}
+.step-pill[data-active="true"] { background-color: var(--bg-surface); color: var(--text-primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
+.pef-hero { text-align: center; padding: 12px 0 24px; }
+.pef-value-wrap { display: inline-flex; align-items: baseline; justify-content: center; }
+.pef-number { font-size: 64px; font-weight: var(--fw-pef); letter-spacing: 0.04em; line-height: 1.1; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+@media (min-width: 640px) { .pef-number { font-size: 72px; } }
+.pef-unit { font-size: 20px; font-weight: var(--fw-heading); color: var(--text-secondary); margin-left: 12px; letter-spacing: 0.04em; }
+.pef-context { margin-top: 18px; font-size: 16px; font-weight: var(--fw-heading); letter-spacing: 0.03em; line-height: 1.5; transition: color var(--dur-state) var(--ease-apple); }
+.pef-context[data-zone="green"] { color: var(--zone-green); }
+.pef-context[data-zone="yellow"] { color: var(--zone-yellow); }
+.pef-context[data-zone="red"] { color: var(--zone-red); }
+.pef-context[data-zone="neutral"] { color: var(--text-secondary); }
+.pef-desc { margin-top: 8px; font-size: 14px; color: var(--text-secondary); max-width: 520px; margin-inline: auto; line-height: 1.65; letter-spacing: 0.02em; }
+.tick-wrap { max-width: 420px; margin: 26px auto 0; }
+.tick-meta { display: flex; justify-content: space-between; font-size: var(--fs-11); color: var(--text-secondary); margin-bottom: 8px; letter-spacing: 0.03em; }
+.tick-bar { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+.tick { height: 7px; border-radius: var(--radius-pill); background-color: var(--bg-canvas); border: 1px solid var(--hairline); transition: background-color var(--dur-state) var(--ease-apple); }
+.tick[data-filled="true"] { background-color: var(--accent); border-color: var(--accent); }
+.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 32px; }
+.metric-cell { text-align: center; background-color: var(--bg-canvas); border-radius: var(--radius-card); padding: 16px 12px; border: 1px solid var(--hairline); }
+.metric-label { font-size: var(--fs-11); color: var(--text-secondary); margin-bottom: 6px; letter-spacing: 0.03em; }
+.metric-val { font-size: var(--fs-17); font-weight: var(--fw-heading); color: var(--text-primary); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+.action-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 28px; flex-wrap: wrap; }
+.segmented { display: inline-flex; background-color: var(--bg-canvas); padding: var(--sp-4); border-radius: var(--radius-pill); border: 1px solid var(--hairline); }
+.seg-btn { font-family: var(--font-sans); font-size: var(--fs-13); font-weight: var(--fw-heading); color: var(--text-secondary); background: transparent; border: 0; padding: var(--sp-4) var(--sp-12); border-radius: var(--radius-pill); cursor: pointer; letter-spacing: 0.03em; }
+.seg-btn[data-active="true"] { background-color: var(--bg-surface); color: var(--text-primary); }
+.chart-box { position: relative; width: 100%; height: 220px; margin-top: var(--sp-16); background-color: var(--bg-canvas); border-radius: var(--radius-card); border: 1px solid var(--hairline); padding: var(--sp-8); }
+.skeleton-box { display: none; width: 100%; height: 220px; background-color: var(--bg-canvas); border-radius: var(--radius-input); align-items: center; justify-content: center; font-size: var(--fs-13); color: var(--text-secondary); letter-spacing: 0.02em; }
+.skeleton-box[data-loading="true"] { display: flex; }
+.heatmap-wrap { margin-top: var(--sp-20); padding-top: var(--sp-20); border-top: 1px solid var(--hairline); }
+.heatmap-header { margin-bottom: var(--sp-12); gap: var(--sp-8); }
+.heatmap-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: var(--sp-6, 6px); }
+@media (min-width: 640px) { .heatmap-grid { grid-template-columns: repeat(15, 1fr); gap: var(--sp-8); } }
+.heat-cell { aspect-ratio: 1; border-radius: var(--radius-input); border: 1px solid var(--hairline); background-color: var(--bg-canvas); display: flex; align-items: center; justify-content: center; font-size: var(--fs-11); font-weight: var(--fw-heading); color: var(--text-secondary); cursor: pointer; letter-spacing: 0.02em; }
+.heat-cell[data-zone="green"] { background-color: var(--zone-green-bg); color: var(--zone-green); border-color: var(--zone-green); }
+.heat-cell[data-zone="yellow"] { background-color: var(--zone-yellow-bg); color: var(--zone-yellow); border-color: var(--zone-yellow); }
+.heat-cell[data-zone="red"] { background-color: var(--zone-red-bg); color: var(--zone-red); border-color: var(--zone-red); }
+.session-list { display: flex; flex-direction: column; margin-top: var(--sp-16); }
+.session-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-12); padding: var(--sp-12) var(--sp-8); border-bottom: 1px solid var(--hairline); cursor: pointer; border-radius: var(--radius-input); }
+.session-row:hover { background-color: var(--bg-canvas); }
+.session-row-left { display: flex; flex-direction: column; gap: var(--sp-4); }
+.session-row-title { font-size: var(--fs-15); font-weight: var(--fw-heading); color: var(--text-primary); letter-spacing: 0.025em; }
+.session-row-sub { font-size: var(--fs-13); color: var(--text-secondary); letter-spacing: 0.02em; line-height: 1.5; }
+.modal-backdrop { position: fixed; inset: 0; z-index: 50; background-color: var(--backdrop-modal); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display: flex; align-items: center; justify-content: center; padding: var(--sp-16); opacity: 0; pointer-events: none; transition: opacity var(--dur-modal) var(--ease-apple); }
+.modal-backdrop[data-open="true"] { opacity: 1; pointer-events: auto; }
+.modal-card { width: 100%; max-width: 480px; background-color: var(--bg-surface); border-radius: var(--radius-modal); border: 0; padding: var(--sp-24); max-height: 90vh; overflow-y: auto; }
+.modal-actions { display: flex; justify-content: flex-end; gap: var(--sp-12); margin-top: var(--sp-24); flex-wrap: wrap; }
+.footer { border-top: 1px solid var(--hairline); padding: var(--sp-24) var(--sp-16); text-align: center; font-size: var(--fs-11); color: var(--text-secondary); background-color: var(--bg-surface); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+</style>
+</head>
+<body>
+<header class="top-nav">
+  <div class="nav-inner">
+    <div class="brand">
+      <span>PeakFlow</span>
+    </div>
+    <div class="hw-strip" aria-label="Status Perangkat Keras">
+      <span class="badge badge-neutral" id="hwStatusBadge"><span class="badge-dot"></span><span id="hwStatusText">Siap</span></span>
+      <span class="hw-item" id="pollIndicator" style="display:none;">Memperbarui…</span>
+    </div>
+    <div class="nav-actions">
+      <button type="button" class="btn btn-secondary btn-sm" id="btnChangePatient">
+        <svg class="icon-20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="6.5" r="3"/><path d="M4.5 16.5c1-3 3-4.5 5.5-4.5s4.5 1.5 5.5 4.5"/></svg>
+        <span>Ganti Pasien</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="banner banner-error" id="watchdogBanner" role="alert" data-visible="false">
+    <div class="row-gap">
+      <svg class="icon-20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 6.5v4M10 13.5h.01"/></svg>
+      <span id="watchdogBannerText">Alat tidak merespon. Menghubungi server…</span>
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" id="btnReconnect">Hubungkan Ulang</button>
+  </div>
+
+  <div class="banner banner-warn" id="hwAlertBanner" role="status" data-visible="false">
+    <div class="row-gap">
+      <svg class="icon-20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3.5 17.5 16.5H2.5L10 3.5z"/><path d="M10 8.5v3.5M10 14.2h.01"/></svg>
+      <span id="hwAlertText">Baterai lemah.</span>
+    </div>
+  </div>
+
+  <div class="banner banner-ok" id="toastBanner" role="status" data-visible="false">
+    <div class="row-gap">
+      <svg class="icon-20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="m6.8 10.2 2.2 2.2 4.4-4.4"/></svg>
+      <span id="toastText">Data tersimpan</span>
+    </div>
+  </div>
+
+  <section class="card" aria-labelledby="patientSectionTitle">
+    <div class="patient-bar">
+      <div class="patient-meta">
+        <span class="patient-tag" id="patientSectionTitle">Pasien Aktif</span>
+        <h2 class="patient-name" id="activePatientName">Belum Ada Pasien</h2>
+        <div class="patient-details" id="activePatientMeta">Silakan isi formulir data pasien untuk memulai pemantauan</div>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" id="btnToggleForm">Daftar Pasien</button>
+    </div>
+
+    <form id="patientForm" style="display:none;margin-top:var(--sp-20);padding-top:var(--sp-20);border-top:1px solid var(--hairline);" novalidate>
+      <div class="section-head" style="margin-bottom:var(--sp-12);">
+        <div>
+          <h3 class="section-title" style="font-size:var(--fs-17);">Formulir Data Pasien Baru</h3>
+          <p class="section-subtitle">Data identitas akan didaftarkan ke alat untuk sesi pengukuran PEF.</p>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label class="field-label" for="inputName">Nama Pasien (maks. 50 karakter)</label>
+          <input class="input-line" type="text" id="inputName" name="name" maxlength="50" required placeholder="Masukkan nama pasien" autocomplete="name">
+          <span class="field-error" id="errName"></span>
+        </div>
+        <div class="field">
+          <label class="field-label" for="inputGender">Jenis Kelamin</label>
+          <select class="input-line" id="inputGender" name="gender" required>
+            <option value="M">Laki-laki (M)</option>
+            <option value="F">Perempuan (F)</option>
+          </select>
+          <span class="field-error" id="errGender"></span>
+        </div>
+        <div class="field">
+          <label class="field-label" for="inputAge">Usia (18–80 tahun)</label>
+          <input class="input-line" type="number" id="inputAge" name="age" min="18" max="80" step="1" required placeholder="Contoh: 25">
+          <span class="field-error" id="errAge"></span>
+        </div>
+        <div class="field">
+          <label class="field-label" for="inputHeight">Tinggi Badan (120–220 cm)</label>
+          <input class="input-line" type="number" id="inputHeight" name="height" min="120" max="220" step="0.5" required placeholder="Contoh: 165">
+          <span class="field-error" id="errHeight"></span>
+        </div>
+      </div>
+      <div class="form-footer">
+        <span class="section-subtitle">Disimpan langsung ke NVS ESP32 melalui <code>POST /submit</code>.</span>
+        <div class="row-gap">
+          <button type="button" class="btn btn-secondary" id="btnCancelForm">Batal</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitPatient">Simpan &amp; Mulai Ukur</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section class="card" aria-labelledby="liveSectionTitle">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title" id="liveSectionTitle">Pengukuran Peak Expiratory Flow</h2>
+        <p class="section-subtitle">Sensor FS300A G3/4 · 10 sampel × 200 ms · Threshold mulai &gt; 5,0 L/min</p>
+      </div>
+      <span class="badge badge-neutral" id="liveZoneBadge"><span class="badge-dot"></span><span id="liveZoneBadgeText">Siap</span></span>
+    </div>
+
+    <div class="state-stepper" role="status" aria-label="Tahap Mesin Status Pengukuran">
+      <span class="step-pill" id="stepReady" data-active="true">1. READY (Siap)</span>
+      <span class="step-pill" id="stepRecording" data-active="false">2. RECORDING (10 Sampel)</span>
+      <span class="step-pill" id="stepWaitZero" data-active="false">3. WAIT_ZERO (≤ 5 L/min)</span>
+    </div>
+
+    <div class="pef-hero">
+      <div class="pef-value-wrap">
+        <span class="pef-number" id="pefMainNumber">0,0</span>
+        <span class="pef-unit">L/min</span>
+      </div>
+      <div class="pef-context" id="pefContextLine" data-zone="neutral">Menunggu embusan napas pertama</div>
+      <p class="pef-desc" id="pefClinicalDesc">Tarik napas sedalam mungkin, lalu embuskan sekuat dan secepat mungkin ke corong alat.</p>
+
+      <div class="tick-wrap" aria-label="Progres Pengambilan 10 Sampel">
+        <div class="tick-meta">
+          <span id="tickStatusLabel">Status: Siap (0/10 sampel)</span>
+          <span id="tickDurationLabel">2,0 detik (200 ms/sampel)</span>
+        </div>
+        <div class="tick-bar" id="tickBar"></div>
+      </div>
+    </div>
+
+    <div class="summary-grid" aria-label="Ringkasan Sesi Pengukuran">
+      <div class="metric-cell"><div class="metric-label">Terbaik Sesi Ini</div><div class="metric-val" id="summaryBestVal">0,0 L/min</div></div>
+      <div class="metric-cell"><div class="metric-label">vs Rekor Pribadi</div><div class="metric-val" id="summaryDeltaPb">0,0 L/min</div></div>
+      <div class="metric-cell"><div class="metric-label">vs Sesi Sebelumnya</div><div class="metric-val" id="summaryDeltaPrev">0,0 L/min</div></div>
+    </div>
+
+    <div class="action-row">
+      <button type="button" class="btn btn-primary" id="btnOpenPrintModal">
+        <svg class="icon-20" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 7V3.5h8V7M6 14H4.5A1.5 1.5 0 0 1 3 12.5v-4A1.5 1.5 0 0 1 4.5 7h11A1.5 1.5 0 0 1 17 8.5v4a1.5 1.5 0 0 1-1.5 1.5H14"/><rect x="6" y="11.5" width="8" height="5"/></svg>
+        <span>Cetak Struk Thermal</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="historySectionTitle">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title" id="historySectionTitle">Riwayat &amp; Tren Pernapasan</h2>
+        <p class="section-subtitle" id="weeklySummaryCopy">Belum ada pengukuran yang tercatat.</p>
+      </div>
+      <div class="row-gap">
+        <div class="segmented" role="tablist" aria-label="Rentang Hari Grafik Tren">
+          <button type="button" class="seg-btn" data-range="7" data-active="false" role="tab">7 Hari</button>
+          <button type="button" class="seg-btn" data-range="14" data-active="false" role="tab">14 Hari</button>
+          <button type="button" class="seg-btn" data-range="30" data-active="true" role="tab">30 Hari</button>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnExportCsv">
+          <svg class="icon-20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3.5v9m0 0-3-3m3 3 3-3M4 14.5v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1"/></svg>
+          <span>Ekspor CSV</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="skeleton-box" id="chartSkeleton" data-loading="false">Memuat grafik riwayat sesi…</div>
+    <div class="chart-box" id="chartContainer">
+      <svg id="trendSvg" width="100%" height="220" viewBox="0 0 700 220" role="img" aria-label="Grafik Tren Nilai Peak Expiratory Flow"></svg>
+    </div>
+
+    <div class="heatmap-wrap">
+      <div class="heatmap-header">
+        <div>
+          <h3 class="section-title" style="font-size:var(--fs-15);">Kalender Zona 30 Hari Terakhir</h3>
+          <p class="section-subtitle">Ketuk kotak tanggal untuk melihat detail sesi terbaik hari tersebut.</p>
+        </div>
+        <div class="row-gap" style="font-size:var(--fs-11);color:var(--text-secondary);">
+          <span style="color:var(--zone-green);font-weight:var(--fw-heading);">■ Hijau (≥80%)</span>
+          <span style="color:var(--zone-yellow);font-weight:var(--fw-heading);">■ Kuning (60–79%)</span>
+          <span style="color:var(--zone-red);font-weight:var(--fw-heading);">■ Merah (&lt;60%)</span>
+        </div>
+      </div>
+      <div class="heatmap-grid" id="heatmapGrid" aria-label="Heatmap 30 Hari"></div>
+    </div>
+
+    <div class="heatmap-wrap">
+      <div class="heatmap-header">
+        <div>
+          <h3 class="section-title" style="font-size:var(--fs-15);">Ring Buffer SPIFFS (20 Sesi Terakhir)</h3>
+          <p class="section-subtitle">Ketuk baris sesi untuk membuka grafik 10 sampel mentah dan cetak ulang.</p>
+        </div>
+        <span class="badge badge-neutral" id="sessionCountBadge">20 / 20 sesi</span>
+      </div>
+      <div class="session-list" id="sessionList"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div>
+    PeakFlow Edge Firmware <strong id="footerFwVersion">v1.1.0</strong> (Build <span id="footerBuildDate">2026-04-08</span>) ·
+    ESP32 DevKitC V4 · Sensor FS300A (Pin 15, Faktor Kalibrasi <strong id="footerCalFactor">1,5</strong>) ·
+    Printer Thermal BT-2 (UART Pin 16/17, 19200 baud)
+  </div>
+  <div style="margin-top:var(--sp-4);">Sumber: KTI Yoganata Firman Maulana (STIKES Semarang, 2026) · Standar Zona Klinis GINA 2024 · Mode Offline-First</div>
+</footer>
+
+<div class="modal-backdrop" id="printModal" data-open="false" role="dialog" aria-modal="true" aria-labelledby="printModalTitle">
+  <div class="modal-card">
+    <div class="section-head" style="margin-bottom:var(--sp-8);">
+      <h3 class="section-title" id="printModalTitle" style="font-size:var(--fs-17);">Pratinjau Cetak Struk Thermal (57,5 mm)</h3>
+      <span class="badge badge-neutral" id="printStateBadge">Siap Cetak</span>
+    </div>
+    <p class="section-subtitle">Pastikan kertas thermal BT-2 tersedia. Struk memuat data kesehatan pribadi (UU PDP 27/2022) — berhati-hatilah saat mencetak di tempat umum.</p>
+    <pre class="receipt-pre" id="receiptPreviewText"></pre>
+    <div class="banner banner-error" id="printErrorBanner" data-visible="false" style="margin-top:var(--sp-8);">
+      <span id="printErrorText">Printer thermal tidak terdeteksi. Periksa kabel UART pin 16/17 lalu coba lagi.</span>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" id="btnClosePrintModal">Batal</button>
+      <button type="button" class="btn btn-primary" id="btnConfirmPrint">Cetak Sekarang</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="sessionModal" data-open="false" role="dialog" aria-modal="true" aria-labelledby="sessionModalTitle">
+  <div class="modal-card">
+    <div class="section-head" style="margin-bottom:var(--sp-8);">
+      <h3 class="section-title" id="sessionModalTitle" style="font-size:var(--fs-17);">Detail Sesi Pengukuran</h3>
+      <span class="badge badge-green" id="sessionModalBadge">Zona Hijau</span>
+    </div>
+    <p class="section-subtitle" id="sessionModalMeta"></p>
+    <div style="margin-top:var(--sp-16);padding:var(--sp-16);background-color:var(--bg-canvas);border-radius:var(--radius-input);">
+      <div class="heatmap-header" style="font-size:var(--fs-13);">
+        <span>Kurva 10 Sampel Mentah (interval 200 ms)</span>
+        <strong id="sessionModalBest">641,7 L/min</strong>
+      </div>
+      <svg id="sparklineSvg" width="100%" height="110" viewBox="0 0 380 110" role="img" aria-label="Sparkline 10 Sampel"></svg>
+      <div id="sessionRawSamplesText" style="margin-top:var(--sp-8);font-family:var(--font-mono);font-size:var(--fs-11);color:var(--text-secondary);"></div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button type="button" class="btn btn-danger btn-sm" id="btnDeleteSession">Hapus Sesi</button>
+      <div class="row-gap">
+        <button type="button" class="btn btn-secondary btn-sm" id="btnCloseSessionModal">Tutup</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnReprintSession">Cetak Ulang</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="confirmModal" data-open="false" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+  <div class="modal-card">
+    <h3 class="section-title" id="confirmModalTitle" style="font-size:var(--fs-17);margin-bottom:var(--sp-8);">Konfirmasi Tindakan</h3>
+    <p class="section-subtitle" id="confirmModalBody">Apakah Anda yakin ingin melanjutkan tindakan ini?</p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" id="btnConfirmCancel">Batal</button>
+      <button type="button" class="btn btn-primary" id="btnConfirmProceed">Lanjutkan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const CFG = { FW: '1.1.0', BUILD: '2026-04-08', CAL: 1.5, SAMPLE_MS: 200, POLL_MS: 400, WDT_MS: 3000 };
+
+  const el = (id) => document.getElementById(id);
+  const txt = (id, v) => { el(id).textContent = v; };
+  const ds = (id, k, v) => { el(id).dataset[k] = v; };
+  const on = (id, fn, ev = 'click') => el(id).addEventListener(ev, fn);
+  const qAll = (sel, fn) => document.querySelectorAll(sel).forEach(fn);
+  const r1 = (v) => Math.round((Number(v) || 0) * 10) / 10;
+  const fmt = (v, d = 1) => (Number(v) || 0).toFixed(d).replace('.', ',');
+
+  const ZONES = {
+    green: ['Zona Hijau', 'HIJAU', 'badge-green', 'Fungsi jalan napas baik (≥ 80% prediksi). Lanjutkan pemantauan rutin.'],
+    yellow: ['Zona Kuning', 'KUNING', 'badge-yellow', 'Penyempitan jalan napas ringan-sedang (60–79% prediksi). Evaluasi rencana aksi asma.'],
+    red: ['Zona Merah', 'MERAH', 'badge-red', 'Waspada penyempitan jalan napas berat (< 60% prediksi). Segera konsultasikan ke tenaga kesehatan.']
+  };
+  const zoneMeta = (z) => { const m = ZONES[z] || ZONES.red; return { label: m[0], upper: m[1], cls: m[2], desc: m[3] }; };
+
+  function fmtDate(iso) {
+    const d = iso ? new Date(iso) : new Date(), m = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'], mp = {};
+    new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d).forEach((p) => { mp[p.type] = p.value; });
+    return `Semarang, ${+mp.day} ${m[+mp.month - 1]} ${mp.year} ${mp.hour}:${mp.minute}`;
+  }
+
+  function formatThermalReceipt(s, prof) {
+    const p = prof || s?.profile || S.profile, zm = zoneMeta(s?.zone || 'green'), smp = s?.samples || [], g = [];
+    for (let lvl = 1000; lvl >= 50; lvl -= 50) {
+      let row = `${String(lvl).padStart(4, ' ')}|`;
+      for (let i = 0; i < 10; i++) row += (smp[i] || 0) >= lvl ? ' *' : '  ';
+      g.push(row);
+    }
+    g.push('   0+--------------------', '      1 2 3 4 5 6 7 8 9 0');
+    return [
+      '── PEAKFLOW ──', `Nama    : ${String(p.name).slice(0, 22)}`, `Usia    : ${p.age} th (${p.gender})`, `Tinggi  : ${Math.round(p.height)} cm`,
+      '──', `PEF     : ${r1(s?.best).toFixed(1)} L/min`, `Prediksi: ${r1(s?.predicted).toFixed(1)} L/min`, `Zona    : ${zm.upper} (${r1(s?.pct_predicted).toFixed(1)}%)`,
+      '──', g.join('\n'), '──', fmtDate(s?.started_at)
+    ].join('\n');
+  }
+
+  const edgeServer = {
+    profile: { name: '', gender: 'M', age: 0, height: 0 },
+    state: 'IDLE', battery: 100, wifiMode: 'STA', wifiBars: 4, printerOk: true, wdtOff: false,
+    printState: 'idle', printError: null, currentPeak: 0.0, currentSamples: Array(10).fill(0),
+    sampleIndex: 0, activeSessionId: '', sessions: []
+  };
+  const S = edgeServer;
+
+  const saveState = () => { try { localStorage.setItem('pf_nvs_p', JSON.stringify(S.profile)); localStorage.setItem('pf_spiffs_s', JSON.stringify(S.sessions.slice(0, 20))); } catch (_) {} };
+
+  function loadState() {
+    try {
+      const p = JSON.parse(localStorage.getItem('pf_nvs_p') || 'null'), s = JSON.parse(localStorage.getItem('pf_spiffs_s') || 'null');
+      if (p?.name) S.profile = p;
+      if (Array.isArray(s)) S.sessions = s.slice(0, 20);
+    } catch (_) {}
+    const s0 = S.sessions[0];
+    if (s0) { S.currentPeak = s0.best; S.currentSamples = s0.samples; S.activeSessionId = s0.session_id; }
+  }
+
+  async function apiFetch(path, opts = {}) {
+    if (S.wdtOff) throw new Error('WDT');
+    const actionMap = {
+      '/get-data': 'api.php?action=get_active',
+      '/submit': 'api.php?action=save_patient',
+      '/update-test': 'api.php?action=update_test',
+      '/sessions': 'api.php?action=sessions',
+      '/print': 'api.php?action=print',
+      '/check-print': 'api.php?action=check_print',
+      '/export.csv': 'api.php?action=export_csv'
+    };
+    const cleanPath = path.split('?')[0];
+    const targetUrl = actionMap[cleanPath] || path;
+    try {
+      if (window.location.protocol.startsWith('http')) {
+        const res = await fetch(targetUrl, {
+          method: opts.method || (path === '/submit' || path === '/print' ? 'POST' : 'GET'),
+          headers: { 'Content-Type': 'application/json' },
+          body: opts.body
+        });
+        if (res.ok) {
+          if (path === '/submit') return { ok: true, text: async () => 'Data tersimpan' };
+          return res;
+        }
+      }
+    } catch (_) {}
+    if (path === '/get-data') {
+      const status = !S.printerOk ? 'Printer tidak terhubung' : S.battery < 20 ? 'Baterai lemah' : S.state === 'RECORDING' ? 'Mengukur' : S.state === 'WAIT_ZERO' ? 'Tunggu embusan berikutnya' : S.state === 'PRINTING' ? 'Mencetak struk' : S.sampleIndex >= 10 ? 'Selesai' : 'Siap';
+      return { ok: true, json: async () => ({
+        name: edgeServer.profile.name,
+        gender: edgeServer.profile.gender,
+        age: edgeServer.profile.age,
+        height: edgeServer.profile.height,
+        peak: S.currentPeak, predicted: 0.0, pct_predicted: 0.0, zone: 'neutral',
+        state: S.state, status, battery: S.battery, wifi_mode: S.wifiMode,
+        wifi_bars: S.wifiBars, printer_ok: S.printerOk, sample_index: S.sampleIndex,
+        samples: S.currentSamples, session_id: S.activeSessionId
+      }) };
+    }
+    if (path === '/sessions') {
+      return { ok: true, json: async () => ({ status: 'success', count: S.sessions.length, sessions: S.sessions }) };
+    }
+    if (path === '/submit') {
+      const b = JSON.parse(opts.body);
+      S.profile = { name: String(b.name).trim().slice(0, 50), gender: b.gender === 'F' ? 'F' : 'M', age: +b.age, height: r1(b.height) };
+      saveState(); return { ok: true, text: async () => 'Data tersimpan' };
+    }
+    if (path === '/print') {
+      if (!S.printerOk) {
+        S.printState = 'error'; S.printError = 'Printer thermal tidak terdeteksi. Periksa kabel UART pin 16/17 lalu coba lagi.';
+        return { ok: false, json: async () => ({ state: 'error', error: S.printError }) };
+      }
+      S.printState = 'printing'; S.state = 'PRINTING';
+      setTimeout(() => { S.printState = 'done'; S.state = 'IDLE'; }, 900);
+      return { ok: true, json: async () => ({ state: 'printing' }) };
+    }
+    if (path === '/print-status') return { ok: true, json: async () => ({ state: S.printState, error: S.printError }) };
+    if (path.startsWith('/export.csv')) {
+      const hdr = 'session_id,started_at_utc,name,gender,age,height_cm,best_lpm,predicted_lpm,pct_predicted,zone,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10';
+      const rows = S.sessions.map((s) => [s.session_id, s.started_at, `"${s.profile.name}"`, s.profile.gender, s.profile.age, s.profile.height, r1(s.best).toFixed(1), r1(s.predicted).toFixed(1), r1(s.pct_predicted).toFixed(1), s.zone, ...s.samples.map((v) => r1(v).toFixed(1))].join(','));
+      return { ok: true, text: async () => [hdr, ...rows].join('\n') };
+    }
+    return { ok: true, json: async () => ({ firmware: CFG.FW, build_date: CFG.BUILD, calibration_factor: CFG.CAL }) };
+  }
+
+  let lastPoll = Date.now(), rangeDays = 30, curSessionId = null, confirmCb = null;
+  el('tickBar').innerHTML = '<span class="tick" data-filled="false"></span>'.repeat(10);
+
+  const toast = (msg) => { txt('toastText', msg); ds('toastBanner', 'visible', true); setTimeout(() => ds('toastBanner', 'visible', false), 2500); };
+
+  function renderTelemetry(d) {
+    const hasP = Boolean(d.name && d.name !== 'Belum Ada Pasien');
+    txt('activePatientName', hasP ? d.name : 'Belum Ada Pasien');
+    el('activePatientMeta').innerHTML = hasP
+      ? `${d.gender === 'F' ? 'Perempuan (F)' : 'Laki-laki (M)'} · ${d.age} tahun · ${fmt(d.height, 0)} cm · Prediksi PEF: <strong>${fmt(d.predicted)} L/min</strong>`
+      : 'Silakan daftarkan pasien baru sebelum melakukan pengukuran.';
+    txt('hwStatusText', d.status || 'Siap');
+    el('hwStatusBadge').className = 'badge ' + (!d.printer_ok || d.battery < 20 ? 'badge-red' : d.state === 'RECORDING' ? 'badge-yellow' : 'badge-neutral');
+
+    if (!d.printer_ok) { ds('hwAlertBanner', 'visible', true); txt('hwAlertText', 'Printer thermal tidak terdeteksi. Periksa kabel UART pin 16/17 lalu coba lagi.'); }
+    else if (d.battery < 20) { ds('hwAlertBanner', 'visible', true); txt('hwAlertText', `Baterai lemah (${d.battery}%). Isi daya baterai 18650.`); }
+    else ds('hwAlertBanner', 'visible', false);
+
+    ds('stepReady', 'active', d.state === 'IDLE');
+    ds('stepRecording', 'active', d.state === 'RECORDING');
+    ds('stepWaitZero', 'active', d.state === 'WAIT_ZERO');
+
+    const zm = zoneMeta(d.zone);
+    txt('pefMainNumber', fmt(d.peak));
+    if (d.peak > 0) {
+      ds('pefContextLine', 'zone', d.zone);
+      txt('pefContextLine', `${fmt(d.peak)} L/min · ${fmt(d.pct_predicted)}% dari prediksi (${fmt(d.predicted)} L/min) · ${zm.label}`);
+      txt('pefClinicalDesc', zm.desc);
+      el('liveZoneBadge').className = `badge ${zm.cls}`; txt('liveZoneBadgeText', zm.label);
+    } else {
+      ds('pefContextLine', 'zone', 'neutral');
+      txt('pefContextLine', hasP ? 'Menunggu embusan napas pada mouthpiece alat ESP32…' : 'Daftarkan pasien untuk memulai');
+      txt('pefClinicalDesc', 'Lakukan embusan napas sekuat dan secepat mungkin ke dalam corong sensor FS300A.');
+      el('liveZoneBadge').className = 'badge badge-neutral'; txt('liveZoneBadgeText', 'Standby');
+    }
+
+    el('tickBar').querySelectorAll('.tick').forEach((t, i) => { t.dataset.filled = i < d.sample_index; });
+    txt('tickStatusLabel', d.state === 'RECORDING' ? `Mengukur sampel ${d.sample_index}/10…` : d.state === 'WAIT_ZERO' ? 'Tunggu embusan ≤ 5,0 L/min…' : `Status: ${d.status} (${d.sample_index}/10 sampel)`);
+
+    txt('summaryBestVal', d.peak > 0 ? `${fmt(d.peak)} L/min` : '-');
+    const pb = S.sessions.length ? Math.max(...S.sessions.map((s) => s.best), d.peak) : d.peak;
+    const dPb = pb > 0 ? r1(d.peak - pb) : 0, prev = S.sessions[1], dPrev = (prev && d.peak > 0) ? r1(d.peak - prev.best) : 0;
+    txt('summaryDeltaPb', pb > 0 ? `${dPb >= 0 ? '+' : ''}${fmt(dPb)} L/min` : '-');
+    txt('summaryDeltaPrev', prev ? `${dPrev >= 0 ? '+' : ''}${fmt(dPrev)} L/min` : '-');
+  }
+
+  function renderTrendSvg(sList, days) {
+    if (!sList.length) {
+      el('trendSvg').innerHTML = '<text x="362" y="110" text-anchor="middle" fill="var(--text-secondary)" font-size="13">Belum ada riwayat grafik tren</text>';
+      return;
+    }
+    const flt = sList.filter((s) => new Date(s.started_at).getTime() >= Date.now() - days * 86400000).slice().reverse();
+    const pts = flt.length ? flt : sList.slice(0, 7).reverse(), pred = pts[pts.length - 1]?.predicted || 500, yOf = (v) => r1(20 + 168 * (1 - Math.min(800, v) / 800));
+    const coords = pts.map((s, i) => ({ x: r1(pts.length === 1 ? 362 : 44 + (i / (pts.length - 1)) * 636), y: yOf(s.best), s }));
+    const yGrid = [800, 600, 400, 200, 0].map((v) => `<line x1="44" y1="${yOf(v)}" x2="680" y2="${yOf(v)}" stroke="var(--hairline)"/><text x="36" y="${yOf(v) + 4}" text-anchor="end" fill="var(--text-secondary)" font-size="11">${v}</text>`).join('');
+    const dots = coords.map((c) => `<g style="cursor:pointer" data-session-id="${c.s.session_id}"><circle cx="${c.x}" cy="${c.y}" r="5" fill="var(--zone-${c.s.zone})" stroke="var(--bg-surface)" stroke-width="1.5"/><text x="${c.x}" y="212" text-anchor="middle" fill="var(--text-secondary)" font-size="11">${new Date(c.s.started_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</text></g>`).join('');
+    el('trendSvg').innerHTML = `${yGrid}<line x1="44" y1="${yOf(pred * 0.8)}" x2="680" y2="${yOf(pred * 0.8)}" stroke="var(--zone-green)" stroke-dasharray="4 4"/><line x1="44" y1="${yOf(pred * 0.6)}" x2="680" y2="${yOf(pred * 0.6)}" stroke="var(--zone-yellow)" stroke-dasharray="4 4"/>${coords.length > 1 ? `<polyline fill="none" stroke="var(--accent)" stroke-width="2" points="${coords.map((c) => `${c.x},${c.y}`).join(' ')}"/>` : ''}${dots}`;
+    el('trendSvg').querySelectorAll('g[data-session-id]').forEach((n) => n.addEventListener('click', () => openDetail(n.dataset.sessionId)));
+  }
+
+  function renderHistory() {
+    const sList = S.sessions;
+    txt('sessionCountBadge', `${sList.length} / 20 sesi`);
+    const wk = sList.filter((s) => new Date(s.started_at).getTime() >= Date.now() - 604800000);
+    if (sList.length === 0) {
+      txt('weeklySummaryCopy', 'Belum ada data sesi pengukuran tersimpan. Data akan tersimpan otomatis setiap kali pasien melakukan pengukuran pada alat.');
+      el('sessionList').innerHTML = '<div style="padding:var(--sp-24);text-align:center;color:var(--text-secondary);font-size:var(--fs-13)">Belum ada riwayat sesi pengukuran.</div>';
+    } else {
+      txt('weeklySummaryCopy', `${wk.length} pengukuran minggu ini. ${wk.filter((s) => s.zone === 'green').length} hijau, ${wk.filter((s) => s.zone === 'yellow').length} kuning, ${wk.filter((s) => s.zone === 'red').length} merah.`);
+      el('sessionList').innerHTML = sList.map((s) => {
+        const zm = zoneMeta(s.zone), dt = fmtDate(s.started_at).slice(10);
+        return `<div class="session-row" role="button" tabindex="0" data-session-id="${s.session_id}"><div class="session-row-left"><div class="session-row-title">${fmt(s.best)} L/min · ${fmt(s.pct_predicted)}% dari prediksi</div><div class="session-row-sub">${dt} · ${s.profile.name} (${s.profile.age} th, ${s.profile.height} cm)</div></div><span class="badge ${zm.cls}"><span class="badge-dot"></span><span>${zm.label}</span></span></div>`;
+      }).join('');
+      el('sessionList').querySelectorAll('.session-row').forEach((r) => r.addEventListener('click', () => openDetail(r.dataset.sessionId)));
+    }
+    renderTrendSvg(sList, rangeDays);
+
+    const cells = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000), key = d.toISOString().slice(0, 10);
+      const best = sList.filter((s) => s.started_at.slice(0, 10) === key).sort((a, b) => b.best - a.best)[0];
+      cells.push(`<button type="button" class="heat-cell" ${best ? `data-zone="${best.zone}" data-session-id="${best.session_id}"` : ''} title="${key}"><span>${d.getDate()}</span></button>`);
+    }
+    el('heatmapGrid').innerHTML = cells.join('');
+    el('heatmapGrid').querySelectorAll('[data-session-id]').forEach((b) => b.addEventListener('click', () => openDetail(b.dataset.sessionId)));
+  }
+
+  function openDetail(id) {
+    const s = S.sessions.find((it) => it.session_id === id);
+    if (!s) return;
+    curSessionId = id;
+    const zm = zoneMeta(s.zone), smp = s.samples || [], maxS = Math.max(700, ...smp);
+    el('sessionModalBadge').className = `badge ${zm.cls}`; txt('sessionModalBadge', zm.label);
+    txt('sessionModalMeta', `${fmtDate(s.started_at)} · ${s.profile.name} (${s.profile.gender}, ${s.profile.age} th, ${s.profile.height} cm)`);
+    txt('sessionModalBest', `${fmt(s.best)} L/min (${fmt(s.pct_predicted)}%)`);
+    const pts = smp.map((v, i) => ({ x: r1(20 + (i / 9) * 340), y: r1(16 + 78 * (1 - v / maxS)) }));
+    el('sparklineSvg').innerHTML = `<polyline fill="none" stroke="var(--accent)" stroke-width="2" points="${pts.map((p) => `${p.x},${p.y}`).join(' ')}"/><g>${pts.map((p, i) => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="var(--accent)"/><text x="${p.x}" y="106" text-anchor="middle" fill="var(--text-secondary)" font-size="11">S${i + 1}</text>`).join('')}</g>`;
+    txt('sessionRawSamplesText', 'Sampel: ' + smp.map((v) => fmt(v)).join(' · '));
+    ds('sessionModal', 'open', true);
+  }
+
+  const openPrint = (s = S.sessions[0]) => {
+    txt('receiptPreviewText', formatThermalReceipt(s, s?.profile || S.profile));
+    el('printStateBadge').className = 'badge badge-neutral'; txt('printStateBadge', 'Siap Cetak');
+    ds('printErrorBanner', 'visible', !S.printerOk); ds('printModal', 'open', true);
+  };
+  const openConfirm = (title, body, fn) => { txt('confirmModalTitle', title); txt('confirmModalBody', body); confirmCb = fn; ds('confirmModal', 'open', true); };
+
+  async function refreshSessions() {
+    try {
+      const res = await apiFetch('/sessions');
+      if (res.ok) {
+        const d = await res.json();
+        if (Array.isArray(d.sessions)) {
+          S.sessions = d.sessions.slice(0, 20);
+          saveState();
+        }
+      }
+    } catch (_) {}
+    renderHistory();
+  }
+
+  async function poll() {
+    try {
+      const res = await apiFetch('/get-data');
+      if (res.ok) {
+        lastPoll = Date.now();
+        ds('watchdogBanner', 'visible', false);
+        const d = await res.json();
+        const prevSession = S.activeSessionId;
+        renderTelemetry(d);
+        if (d.session_id && d.session_id !== prevSession) {
+          S.activeSessionId = d.session_id;
+          await refreshSessions();
+        }
+      }
+    } catch (_) {
+      if (Date.now() - lastPoll >= CFG.WDT_MS) ds('watchdogBanner', 'visible', true);
+    }
+  }
+
+  on('btnReconnect', () => { poll(); toast('Menghubungkan ke alat…'); });
+
+  const toggleForm = (open) => { el('patientForm').style.display = open ? 'block' : 'none'; if (open) el('inputName').focus(); };
+  on('btnToggleForm', () => toggleForm(el('patientForm').style.display === 'none'));
+  on('btnCancelForm', () => toggleForm(false));
+  on('btnChangePatient', () => toggleForm(true));
+
+  on('patientForm', async (ev) => {
+    ev.preventDefault();
+    const name = el('inputName').value.trim(), gender = el('inputGender').value, age = +el('inputAge').value, height = +el('inputHeight').value;
+    const eN = !name || name.length > 50 ? 'Nama 1–50 karakter.' : '', eG = gender !== 'M' && gender !== 'F' ? 'Pilih M/F.' : '';
+    const eA = !Number.isInteger(age) || age < 18 || age > 80 ? 'Usia 18–80 th.' : '', eH = !height || height < 120 || height > 220 ? 'Tinggi 120–220 cm.' : '';
+    txt('errName', eN); txt('errGender', eG); txt('errAge', eA); txt('errHeight', eH);
+    if (eN || eG || eA || eH) return;
+    await apiFetch('/submit', { body: JSON.stringify({ name, gender, age, height }) });
+    toggleForm(false); toast('Data tersimpan'); await poll(); await refreshSessions();
+  }, 'submit');
+
+  on('btnOpenPrintModal', () => openPrint());
+  on('btnClosePrintModal', () => ds('printModal', 'open', false));
+  on('btnConfirmPrint', async () => {
+    ds('printErrorBanner', 'visible', false);
+    const res = await apiFetch('/print');
+    if (!res.ok) { el('printStateBadge').className = 'badge badge-red'; txt('printStateBadge', 'Gagal'); txt('printErrorText', (await res.json()).error); ds('printErrorBanner', 'visible', true); return; }
+    el('printStateBadge').className = 'badge badge-yellow'; txt('printStateBadge', 'Mencetak…');
+    const pTimer = setInterval(async () => {
+      if ((await (await apiFetch('/print-status')).json()).state === 'done') { clearInterval(pTimer); el('printStateBadge').className = 'badge badge-green'; txt('printStateBadge', 'Tercetak'); toast('Struk selesai dicetak'); }
+    }, 300);
+  });
+
+  on('btnCloseSessionModal', () => ds('sessionModal', 'open', false));
+  on('btnReprintSession', () => { ds('sessionModal', 'open', false); openPrint(S.sessions.find((s) => s.session_id === curSessionId)); });
+  on('btnDeleteSession', () => {
+    const id = curSessionId; ds('sessionModal', 'open', false);
+    openConfirm('Hapus Sesi?', `Hapus sesi ${id} dari riwayat?`, () => { S.sessions = S.sessions.filter((s) => s.session_id !== id); saveState(); renderHistory(); toast('Sesi dihapus'); });
+  });
+  on('btnConfirmCancel', () => { confirmCb = null; ds('confirmModal', 'open', false); });
+  on('btnConfirmProceed', () => { const fn = confirmCb; confirmCb = null; ds('confirmModal', 'open', false); if (fn) fn(); });
+
+  qAll('.seg-btn[data-range]', (b) => b.addEventListener('click', () => {
+    qAll('.seg-btn[data-range]', (x) => { x.dataset.active = false; });
+    b.dataset.active = true; rangeDays = +b.dataset.range;
+    ds('chartSkeleton', 'loading', true); el('chartContainer').style.display = 'none';
+    setTimeout(() => { ds('chartSkeleton', 'loading', false); el('chartContainer').style.display = 'block'; renderTrendSvg(S.sessions, rangeDays); }, 200);
+  }));
+
+  on('btnExportCsv', async () => {
+    const res = await apiFetch('/export.csv?session=all');
+    const url = URL.createObjectURL(new Blob([await res.text()], { type: 'text/csv' })), a = document.createElement('a');
+    a.href = url; a.download = 'peakflow-sessions.csv'; a.click(); URL.revokeObjectURL(url);
+    toast('CSV diekspor');
+  });
+
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ['printModal', 'sessionModal', 'confirmModal'].forEach((id) => ds(id, 'open', false)); });
+
+  loadState();
+  poll();
+  refreshSessions();
+  setInterval(poll, CFG.POLL_MS);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "peakflow-respiratory-portal",
+  "version": "2.0.0",
+  "description": "PeakFlow Respiratory Portal — Production Node.js Server & Edge UI",
+  "main": "server.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node tests/verify-acceptance.mjs",
+    "test:server": "node tests/test-server.mjs",
+    "test:all": "node tests/verify-acceptance.mjs && node tests/test-server.mjs"
+  },
+  "keywords": [
+    "peakflow",
+    "esp32",
+    "asthma-monitoring",
+    "respiratory",
+    "iot"
+  ],
+  "author": "STIKES Semarang & Tastikess",
+  "license": "Internal"
+}
+
