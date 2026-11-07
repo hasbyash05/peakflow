@@ -1,12 +1,19 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
 import { spawn } from 'node:child_process';
 
 console.log('=== PeakFlow Node.js Server Test Suite ===\n');
 
-// Start server on test port 3888
+const testDbPath = path.join(process.cwd(), 'data', 'test-peakflow.db');
+if (fs.existsSync(testDbPath)) {
+  try { fs.unlinkSync(testDbPath); } catch (_) {}
+}
+
+// Start server on test port 3888 with isolated test database
 const serverProc = spawn('node', ['server.mjs'], {
-  env: { ...process.env, PORT: '3888' },
+  env: { ...process.env, PORT: '3888', DB_PATH: testDbPath },
   stdio: 'pipe'
 });
 
@@ -101,4 +108,7 @@ try {
   console.log('\nAll Node.js Server test assertions passed successfully!');
 } finally {
   serverProc.kill();
+  if (fs.existsSync(testDbPath)) {
+    try { fs.unlinkSync(testDbPath); } catch (_) {}
+  }
 }

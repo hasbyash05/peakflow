@@ -32,7 +32,7 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const dbPath = path.join(dataDir, 'peakflow.db');
+const dbPath = process.env.DB_PATH || path.join(dataDir, 'peakflow.db');
 
 try {
   const { DatabaseSync } = await import('node:sqlite');
