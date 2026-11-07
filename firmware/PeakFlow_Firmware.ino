@@ -52,7 +52,7 @@ Adafruit_SH1107 display(64, 128, &Wire);
 //   const char* SERVER_BASE = "http://192.168.1.50:3000";
 const char* WIFI_SSID     = "NAMA_WIFI_ANDA";     // Ganti dengan SSID WiFi/Hotspot Anda
 const char* WIFI_PASSWORD = "PASSWORD_WIFI";      // Ganti dengan Password WiFi Anda
-const char* SERVER_BASE   = "http://192.168.1.50:3000"; // Ganti dengan Domain atau IP Server Node.js Anda
+const char* SERVER_BASE   = "https://ta.ukmiptek.org"; // Mengarah ke portal publik ta.ukmiptek.org
 
 // Mode Cadangan SoftAP (Jika WiFi Luar Tidak Terhubung)
 const char* AP_SSID       = "PeakFlowWeb";

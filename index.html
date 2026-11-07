@@ -498,13 +498,29 @@ body {
 
   async function apiFetch(path, opts = {}) {
     if (S.wdtOff) throw new Error('WDT');
+    const actMap = {
+      '/get-data': 'api.php?action=get_active',
+      '/submit': 'api.php?action=save_patient',
+      '/update-test': 'api.php?action=update_test',
+      '/sessions': 'api.php?action=sessions',
+      '/print': 'api.php?action=print',
+      '/check-print': 'api.php?action=check_print',
+      '/export.csv': 'api.php?action=export_csv'
+    };
     try {
       if (window.location.protocol.startsWith('http')) {
-        const res = await fetch(path, {
+        let res = await fetch(path, {
           method: opts.method || (path === '/submit' || path === '/print' ? 'POST' : 'GET'),
           headers: { 'Content-Type': 'application/json' },
           body: opts.body
         });
+        if (!res.ok && actMap[path.split('?')[0]]) {
+          res = await fetch(actMap[path.split('?')[0]], {
+            method: opts.method || (path === '/submit' || path === '/print' ? 'POST' : 'GET'),
+            headers: { 'Content-Type': 'application/json' },
+            body: opts.body
+          });
+        }
         if (res.ok) {
           if (path === '/submit') return { ok: true, text: async () => 'Data tersimpan' };
           return res;

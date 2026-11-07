@@ -1,0 +1,19 @@
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+
+# Headers CORS untuk ESP32 & Web App
+Header set Access-Control-Allow-Origin "*"
+Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+Header set Access-Control-Allow-Headers "Content-Type"
+
+# Arahkan endpoint REST langsung ke api.php pada Apache / LiteSpeed (ta.ukmiptek.org)
+RewriteRule ^get-data/?$ api.php?action=get_active [QSA,L]
+RewriteRule ^submit/?$ api.php?action=save_patient [QSA,L]
+RewriteRule ^update-test/?$ api.php?action=update_test [QSA,L]
+RewriteRule ^sessions/?$ api.php?action=sessions [QSA,L]
+RewriteRule ^print/?$ api.php?action=print [QSA,L]
+RewriteRule ^check-print/?$ api.php?action=check_print [QSA,L]
+RewriteRule ^export\.csv/?$ api.php?action=export_csv [QSA,L]
+RewriteRule ^export/?$ api.php?action=export_csv [QSA,L]
+</IfModule>
