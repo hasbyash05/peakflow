@@ -14,8 +14,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
 
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+
 // Tangani preflight OPTIONS request untuk CORS
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+if ($method === 'OPTIONS') {
     header('Access-Control-Allow-Origin: *');
     header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type');
@@ -24,7 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 $pdo = getDbConnection();
-$method = $_SERVER['REQUEST_METHOD'];
 
 // Tentukan action baik dari query parameter ?action=... maupun dari URL path
 $action = $_GET['action'] ?? '';
